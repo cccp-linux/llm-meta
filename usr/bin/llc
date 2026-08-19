@@ -1,0 +1,74 @@
+#!/usr/bin/python3
+
+import llm
+import os
+import prompt_toolkit as pt
+import pygments as pg
+import sys
+import threading
+import time
+
+def hide_cursor(): print("\033[?25l", end="")
+def show_cursor(): print("\033[?25h", end="")
+
+def spinner(stop):
+    s = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+    i = 0
+    hide_cursor()
+    while not stop.is_set():
+        print(f"{s[i]}\r", end="")
+        i = (i + 1) % len(s)
+        time.sleep(.1)
+    show_cursor()
+
+model_map = {
+    "claude"   : "claude-sonnet-4.5",
+    "codestral": "codestral",
+    "gpt"      : "gpt-oss",
+    "grok"     : "grok-code-fast-1",
+    "groq"     : "groq-llama-3.3-70b",
+}
+
+pgm = os.path.basename(sys.argv[0])
+name = None
+if pgm in model_map: name = model_map[pgm]
+elif len(sys.argv) > 1: name = sys.argv[1]
+
+convo = llm.get_model(name).conversation()
+
+style = pt.styles.pygments.style_from_pygments_cls(
+    pg.styles.get_style_by_name("monokai")
+)
+pg_markdown = pg.lexers.MarkdownLexer()
+pt_markdown = pt.lexers.PygmentsLexer(pg.lexers.MarkdownLexer)
+
+try:
+    print("─" * 40)
+    while True:
+        prompt = pt.prompt("> ", multiline=True, style=style, lexer=pt_markdown)
+        print("·" * 40)
+
+        stop = threading.Event()
+        thread = threading.Thread(target=spinner, args=(stop,))
+        thread.start()
+
+        try:
+            response = None
+            response = convo.prompt(prompt, system="be brief").text()
+        except Exception as e:
+            print(f"Error: {e}")
+        finally:
+            stop.set()
+            thread.join()
+
+        if response:
+            tokens = pt.formatted_text.PygmentsTokens(pg.lex(response, lexer=pg_markdown))
+            pt.print_formatted_text(tokens, style=style)
+        print("─" * 40)
+
+except EOFError:
+    pass
+except KeyboardInterrupt:
+    pass
+finally:
+    show_cursor()
