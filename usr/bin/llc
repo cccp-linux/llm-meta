@@ -21,20 +21,25 @@ def spinner(stop):
         time.sleep(.1)
     show_cursor()
 
-model_map = {
-    "claude"   : "claude-sonnet-4.5",
-    "codestral": "codestral",
-    "gpt"      : "gpt-oss",
-    "grok"     : "grok-code-fast-1",
-    "groq"     : "groq-llama-3.3-70b",
-}
+name = os.path.basename(sys.argv[0])
+if name == "llc":
+    model = llm.get_model()
+else:
+    found = [model for alias, model in llm.get_model_aliases().items() if name == alias]
+    if len(found) < 1: found = [model for model in llm.get_models() if name == model.model_id]
+    if len(found) < 1: found = [model for model in llm.get_models() if name in model.model_id]
 
-pgm = os.path.basename(sys.argv[0])
-name = None
-if pgm in model_map: name = model_map[pgm]
-elif len(sys.argv) > 1: name = sys.argv[1]
+    if len(found) < 1:
+        print(f"Model '{name}' not found")
+        exit(1)
+    elif len(found) > 1:
+        print(f"Found more than one model matching '{name}':");
+        for model in found: print(model.model_id)
+        exit(1)
+    else: model = found[0]
 
-convo = llm.get_model(name).conversation()
+print(f"Using model '{model.model_id}'")
+convo = model.conversation()
 
 style = pt.styles.pygments.style_from_pygments_cls(
     pg.styles.get_style_by_name("monokai")
