@@ -46,6 +46,7 @@ try:
     print("─" * 40)
     while True:
         prompt = pt.prompt("> ", multiline=True, style=style, lexer=pt_markdown)
+        if not prompt.strip(): continue
         print("·" * 40)
 
         stop = threading.Event()
