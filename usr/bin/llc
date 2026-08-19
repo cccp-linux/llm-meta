@@ -55,7 +55,7 @@ try:
 
         try:
             response = None
-            response = convo.prompt(prompt, system="be brief").text()
+            response = convo.prompt(prompt).text()
         except Exception as e:
             print(f"Error: {e}")
         finally:
