@@ -4,6 +4,7 @@ import llm
 import os
 import prompt_toolkit as pt
 import pygments as pg
+import sqlite_utils
 import sys
 import threading
 import time
@@ -39,7 +40,9 @@ else:
     else: model = found[0]
 
 print(f"Using model '{model.model_id}'")
+
 convo = model.conversation()
+db = sqlite_utils.Database(llm.user_dir() / "logs.db")
 
 style = pt.styles.pygments.style_from_pygments_cls(
     pg.styles.get_style_by_name("monokai")
@@ -60,7 +63,9 @@ try:
 
         try:
             response = None
-            response = convo.prompt(prompt).text()
+            response = convo.prompt(prompt)
+            response.log_to_db(db)
+            response = response.text()
         except Exception as e:
             print(f"Error: {e}")
         finally:
