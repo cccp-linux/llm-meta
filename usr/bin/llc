@@ -85,14 +85,14 @@ if args.model == "show_models":
     exit(0)
 
 name = args.model or os.path.basename(sys.argv[0])
+if name == "llc": name = None
 model = None
 
-if name != "llc":
-    found = [model for alias, model in llm.get_model_aliases().items() if name == alias]
-    if len(found) < 1: found = [model for model in llm.get_models() if name == model.model_id]
-    if len(found) < 1: found = [model for model in llm.get_models() if name in model.model_id]
-
-    if len(found) < 1:
+try:
+    model = llm.get_model(name)
+except llm.UnknownModelError:
+    found = [ model for model in llm.get_models() if name in model.model_id ]
+    if not found:
         print(f"Model '{name}' not found")
         exit(1)
     elif len(found) > 1:
@@ -105,7 +105,6 @@ if args.history is not None:
     show_threads(model, args.history)
     exit(0)
 
-if not model: model = llm.get_model()
 print(f"Using model '{model.model_id}'")
 
 convo = model.conversation()
