@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import argparse
 import llm
 import os
 import prompt_toolkit as pt
@@ -22,10 +23,71 @@ def spinner(stop):
         time.sleep(.1)
     show_cursor()
 
-name = os.path.basename(sys.argv[0])
-if name == "llc":
-    model = llm.get_model()
-else:
+def show_models():
+    aliases_by_id = {}
+    for alias, model in llm.get_model_aliases().items():
+        model_id = model.model_id
+        if alias != model_id:
+            aliases_by_id.setdefault(model_id, []).append(alias)
+
+    print("Available models:")
+    for model in llm.get_models():
+        model_id = model.model_id
+        aliases = aliases_by_id.get(model_id)
+        if aliases: print(f"  {model_id:<32} (alias: {', '.join(aliases)})")
+        else: print(f"  {model_id}")
+
+def show_threads(model, count):
+    where = f"WHERE turns.model = '{model.model_id}'" if model else ""
+    limit = f"LIMIT {count}" if count else ""
+
+    db = sqlite_utils.Database(llm.user_dir() / "logs.db")
+    threads = db.query(f"""SELECT DISTINCT threads.id, threads.name, threads.datetime_utc
+FROM threads JOIN turns ON threads.id = thread_id
+{where}
+ORDER BY threads.datetime_utc DESC
+{limit}
+""")
+
+    print("Recent conversations:")
+    for thread in threads:
+        prompts = [ row["prompt"] for row in db.query(f"""SELECT prompt
+FROM turns JOIN turn_search ON turns.id = turn_search.turn_id
+WHERE turns.thread_id = '{thread['id']}'
+ORDER BY turns.datetime_utc ASC
+""") ]
+        prompt = prompts[0] + " … " + prompts[-1] if len(prompts) > 1 else prompts[0] if len(prompts) == 1 else "???"
+        prompt = prompt.replace("\n", "").strip()
+        if len(prompt) > 120: prompt = prompt[:58] + " … " + prompt[-58:]
+
+        print("─" * 40)
+        print(f"ID:     {thread['id']}")
+        print(f"Name:   {thread['name'] or 'Untitled'}")
+        print(f"Date:   {thread['datetime_utc'][:19].replace('T', ' ')}")
+        print(f"Prompt: {prompt}")
+
+####################
+parser = argparse.ArgumentParser(add_help=False)
+parser.add_argument("-h", "--help", action="help", help="""
+    Show this help message and exit.
+""")
+parser.add_argument("-H", "--history", metavar="num", nargs="?", type=int, const=10, help="""
+    Show conversation history. Defaults to the 10 most recent if <num> is omitted. Use 0 to show all.
+    When used together with the -m option, only shows history for that specific model.
+""")
+parser.add_argument("-m", "--model", metavar="name", nargs="?", const="show_models", help="""
+    Specify the model to use (partial names allowed). If omitted, shows available models.
+""")
+args = parser.parse_args()
+
+if args.model == "show_models":
+    show_models()
+    exit(0)
+
+name = args.model or os.path.basename(sys.argv[0])
+model = None
+
+if name != "llc":
     found = [model for alias, model in llm.get_model_aliases().items() if name == alias]
     if len(found) < 1: found = [model for model in llm.get_models() if name == model.model_id]
     if len(found) < 1: found = [model for model in llm.get_models() if name in model.model_id]
@@ -39,6 +101,11 @@ else:
         exit(1)
     else: model = found[0]
 
+if args.history is not None:
+    show_threads(model, args.history)
+    exit(0)
+
+if not model: model = llm.get_model()
 print(f"Using model '{model.model_id}'")
 
 convo = model.conversation()
