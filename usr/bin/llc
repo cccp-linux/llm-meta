@@ -49,7 +49,7 @@ ORDER BY threads.datetime_utc DESC
 {limit}
 """)
 
-    print("Recent conversations:")
+    print("Recent threads:")
     for thread in threads:
         prompts = [ row["prompt"] for row in db.query(f"""SELECT prompt
 FROM turns JOIN turn_search ON turns.id = turn_search.turn_id
@@ -61,10 +61,10 @@ ORDER BY turns.datetime_utc ASC
         if len(prompt) > 120: prompt = prompt[:58] + " … " + prompt[-58:]
 
         print("─" * 40)
-        print(f"ID:     {thread['id']}")
-        print(f"Name:   {thread['name'] or 'Untitled'}")
-        print(f"Date:   {thread['datetime_utc'][:19].replace('T', ' ')}")
-        print(f"Prompt: {prompt}")
+        print(f"thread: {thread['id']}")
+        print(f"  name: {thread['name']}")
+        print(f"  date: {thread['datetime_utc'][:19].replace('T', ' ')}")
+        print(f"prompt: {prompt}")
 
 ####################
 parser = argparse.ArgumentParser(add_help=False)
@@ -72,7 +72,7 @@ parser.add_argument("-h", "--help", action="help", help="""
     Show this help message and exit.
 """)
 parser.add_argument("-H", "--history", metavar="num", nargs="?", type=int, const=10, help="""
-    Show conversation history. Defaults to the 10 most recent if <num> is omitted. Use 0 to show all.
+    Show thread history. Defaults to the 10 most recent threads if <num> is omitted. Use 0 to show all.
     When used together with the -m option, only shows history for that specific model.
 """)
 parser.add_argument("-m", "--model", metavar="name", nargs="?", const="show_models", help="""
