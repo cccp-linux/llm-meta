@@ -10,6 +10,8 @@ import sys
 import threading
 import time
 
+db = sqlite_utils.Database(llm.user_dir() / "logs.db")
+
 def hide_cursor(): print("\033[?25l", end="")
 def show_cursor(): print("\033[?25h", end="")
 
@@ -40,8 +42,6 @@ def show_models():
 def show_threads(model, count):
     where = f"WHERE turns.model = '{model.model_id}'" if model else ""
     limit = f"LIMIT {count}" if count else ""
-
-    db = sqlite_utils.Database(llm.user_dir() / "logs.db")
     threads = db.query(f"""SELECT DISTINCT threads.id, threads.name, threads.datetime_utc
 FROM threads JOIN turns ON threads.id = thread_id
 {where}
@@ -109,7 +109,6 @@ if not model: model = llm.get_model()
 print(f"Using model '{model.model_id}'")
 
 convo = model.conversation()
-db = sqlite_utils.Database(llm.user_dir() / "logs.db")
 
 style = pt.styles.pygments.style_from_pygments_cls(
     pg.styles.get_style_by_name("monokai")
