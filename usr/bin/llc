@@ -53,8 +53,7 @@ ORDER BY turns.datetime_utc ASC
         print(f"prompt: {prompt}")
 
 def get_model(name):
-    model = None
-    try: model = llm.get_model(name)
+    try: return llm.get_model(name)
     except llm.UnknownModelError:
         found = [ m for m in llm.get_models() if name in m.model_id ]
         if not found:
@@ -62,8 +61,8 @@ def get_model(name):
         elif len(found) > 1:
             print(f"Found more than one model matching '{name}':");
             for m in found: print(m.model_id)
-        else: model = found[0]
-    return model
+        else: return found[0]
+    sys.exit(1)
 
 ####################
 parser = argparse.ArgumentParser(add_help=False)
@@ -97,16 +96,12 @@ if args.model == "show_models":
 
 ####################
 elif args.history is not None:
-    if name != "llc":
-        model = get_model(name)
-        if not model: exit(1)
-    else: model = None
+    model = get_model(name) if name != "llc" else None
     show_threads(model, args.history)
 
 ####################
 else:
     model = get_model(name if name != "llc" else None)
-    if not model: exit(1)
 
     print(f"Using model '{model.model_id}'")
     convo = model.conversation()
