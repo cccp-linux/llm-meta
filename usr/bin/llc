@@ -25,21 +25,6 @@ def spinner(stop):
         time.sleep(.1)
     show_cursor()
 
-def show_models():
-    aliases_by_id = {}
-    for alias, model in llm.get_model_aliases().items():
-        model_id = model.model_id
-        if alias != model_id:
-            aliases_by_id.setdefault(model_id, []).append(alias)
-
-    def print_model(model_id, aliases):
-        if aliases: print(f"{model_id:<32} (alias: {', '.join(aliases)})")
-        else: print(f"{model_id}")
-
-    print("Available models:")
-    for m in llm.get_models():
-        print_model(m.model_id, aliases_by_id.get(m.model_id))
-
 def show_threads(model, count):
     where = f"WHERE turns.model = '{model.model_id}'" if model else ""
     limit = f"LIMIT {count}" if count else ""
@@ -69,10 +54,7 @@ ORDER BY turns.datetime_utc ASC
 
 def get_model(name):
     model = None
-    try:
-        if name == "llc": name = None
-        model = llm.get_model(name)
-
+    try: model = llm.get_model(name)
     except llm.UnknownModelError:
         found = [ m for m in llm.get_models() if name in m.model_id ]
         if not found:
@@ -81,7 +63,6 @@ def get_model(name):
             print(f"Found more than one model matching '{name}':");
             for m in found: print(m.model_id)
         else: model = found[0]
-
     return model
 
 ####################
@@ -98,58 +79,74 @@ parser.add_argument("-m", "--model", metavar="name", nargs="?", const="show_mode
 """)
 args = parser.parse_args()
 
-if args.model == "show_models":
-    show_models()
-    exit(0)
-
 name = args.model or os.path.basename(sys.argv[0])
-model = get_model(name)
-if not model: exit(1)
 
-if args.history is not None:
+####################
+if args.model == "show_models":
+    aliases_by_id = {}
+    for alias, model in llm.get_model_aliases().items():
+        model_id = model.model_id
+        if alias != model_id:
+            aliases_by_id.setdefault(model_id, []).append(alias)
+
+    print("Available models:")
+    for m in llm.get_models():
+        aliases = aliases_by_id.get(m.model_id)
+        if aliases: print(f"{m.model_id:<32} (alias: {', '.join(aliases)})")
+        else: print(f"{m.model_id}")
+
+####################
+elif args.history is not None:
+    if name != "llc":
+        model = get_model(name)
+        if not model: exit(1)
+    else: model = None
     show_threads(model, args.history)
-    exit(0)
 
-print(f"Using model '{model.model_id}'")
+####################
+else:
+    model = get_model(name if name != "llc" else None)
+    if not model: exit(1)
 
-convo = model.conversation()
+    print(f"Using model '{model.model_id}'")
+    convo = model.conversation()
 
-style = pt.styles.pygments.style_from_pygments_cls(
-    pg.styles.get_style_by_name("monokai")
-)
-pg_markdown = pg.lexers.MarkdownLexer()
-pt_markdown = pt.lexers.PygmentsLexer(pg.lexers.MarkdownLexer)
+    style = pt.styles.pygments.style_from_pygments_cls(
+        pg.styles.get_style_by_name("monokai")
+    )
+    pg_markdown = pg.lexers.MarkdownLexer()
+    pt_markdown = pt.lexers.PygmentsLexer(pg.lexers.MarkdownLexer)
 
-try:
-    print("─" * 40)
-    while True:
-        prompt = pt.prompt("> ", multiline=True, style=style, lexer=pt_markdown)
-        if not prompt.strip(): continue
-        print("·" * 40)
-
-        stop = threading.Event()
-        thread = threading.Thread(target=spinner, args=(stop,))
-        thread.start()
-
-        try:
-            response = None
-            response = convo.prompt(prompt)
-            response.log_to_db(db)
-            response = response.text()
-        except Exception as e:
-            print(f"Error: {e}")
-        finally:
-            stop.set()
-            thread.join()
-
-        if response:
-            tokens = pt.formatted_text.PygmentsTokens(pg.lex(response, lexer=pg_markdown))
-            pt.print_formatted_text(tokens, style=style)
+    try:
         print("─" * 40)
+        while True:
+            prompt = pt.prompt("> ", multiline=True, style=style, lexer=pt_markdown)
+            if not prompt.strip(): continue
+            print("·" * 40)
 
-except EOFError:
-    pass
-except KeyboardInterrupt:
-    pass
-finally:
-    show_cursor()
+            stop = threading.Event()
+            thread = threading.Thread(target=spinner, args=(stop,))
+            thread.start()
+
+            try:
+                response = None
+                response = convo.prompt(prompt)
+                response.log_to_db(db)
+                response = response.text()
+            except Exception as e:
+                print(f"Error: {e}")
+            finally:
+                stop.set()
+                thread.join()
+
+            if response:
+                tokens = pt.formatted_text.PygmentsTokens(pg.lex(response, lexer=pg_markdown))
+                pt.print_formatted_text(tokens, style=style)
+            print("─" * 40)
+
+    except EOFError:
+        pass
+    except KeyboardInterrupt:
+        pass
+    finally:
+        show_cursor()
