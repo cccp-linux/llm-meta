@@ -32,12 +32,13 @@ def show_models():
         if alias != model_id:
             aliases_by_id.setdefault(model_id, []).append(alias)
 
+    def print_model(model_id, aliases):
+        if aliases: print(f"{model_id:<32} (alias: {', '.join(aliases)})")
+        else: print(f"{model_id}")
+
     print("Available models:")
-    for model in llm.get_models():
-        model_id = model.model_id
-        aliases = aliases_by_id.get(model_id)
-        if aliases: print(f"  {model_id:<32} (alias: {', '.join(aliases)})")
-        else: print(f"  {model_id}")
+    for m in llm.get_models():
+        print_model(m.model_id, aliases_by_id.get(m.model_id))
 
 def show_threads(model, count):
     where = f"WHERE turns.model = '{model.model_id}'" if model else ""
