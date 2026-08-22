@@ -44,8 +44,8 @@ parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument("-h", "--help", action="help", help="""
     Show this help message and exit.
 """)
-parser.add_argument("-H", "--history", metavar="num", nargs="?", type=int, const=10, help="""
-    Show thread history. Defaults to the 10 most recent threads if <num> is omitted. Use 0 to show all.
+parser.add_argument("-H", "--history", metavar="num", nargs="?", type=int, const=3, help="""
+    Show thread history. Defaults to the 3 most recent threads if <num> is omitted. Use 0 to show all.
     When used together with the -m option, only shows history for that specific model.
 """)
 parser.add_argument("-m", "--model", metavar="name", nargs="?", const="show_models", help="""
