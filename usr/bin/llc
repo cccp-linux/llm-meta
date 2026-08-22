@@ -25,33 +25,6 @@ def spinner(stop):
         time.sleep(.1)
     show_cursor()
 
-def show_threads(model, count):
-    where = f"WHERE turns.model = '{model.model_id}'" if model else ""
-    limit = f"LIMIT {count}" if count else ""
-    threads = db.query(f"""SELECT DISTINCT threads.id, threads.name, threads.datetime_utc
-FROM threads JOIN turns ON threads.id = thread_id
-{where}
-ORDER BY threads.datetime_utc DESC
-{limit}
-""")
-
-    print("Recent threads:")
-    for thread in threads:
-        prompts = [ row["prompt"] for row in db.query(f"""SELECT prompt
-FROM turns JOIN turn_search ON turns.id = turn_search.turn_id
-WHERE turns.thread_id = '{thread['id']}'
-ORDER BY turns.datetime_utc ASC
-""") ]
-        prompt = prompts[0] + " … " + prompts[-1] if len(prompts) > 1 else prompts[0] if len(prompts) == 1 else "???"
-        prompt = prompt.replace("\n", "").strip()
-        if len(prompt) > 120: prompt = prompt[:58] + " … " + prompt[-58:]
-
-        print("─" * 40)
-        print(f"thread: {thread['id']}")
-        print(f"  name: {thread['name']}")
-        print(f"  date: {thread['datetime_utc'][:19].replace('T', ' ')}")
-        print(f"prompt: {prompt}")
-
 def get_model(name):
     try: return llm.get_model(name)
     except llm.UnknownModelError:
@@ -97,7 +70,45 @@ if args.model == "show_models":
 ####################
 elif args.history is not None:
     model = get_model(name) if name != "llc" else None
-    show_threads(model, args.history)
+    count = args.history
+
+    threads = db.query("""
+        SELECT DISTINCT threads.id, threads.name, threads.datetime_utc
+        FROM threads JOIN turns ON threads.id = turns.thread_id
+        WHERE turns.model LIKE ?
+        ORDER BY threads.datetime_utc DESC LIMIT ?""",
+    [model.model_id if model else "%", count if count else -1])
+    threads = list(threads)
+
+    params = [thread["id"] for thread in threads]
+    places = ",".join("?" * len(params))
+    prompts= db.query("""
+        WITH ranked AS (
+            SELECT turns.thread_id, turn_search.prompt,
+                ROW_NUMBER() OVER (PARTITION BY turns.thread_id ORDER BY turns.datetime_utc) AS i,
+                COUNT(*) OVER (PARTITION BY turns.thread_id) AS n
+            FROM turns JOIN turn_search ON turns.id = turn_search.turn_id
+            WHERE turns.thread_id IN (""" + places + """)
+        )
+        SELECT thread_id, prompt FROM ranked WHERE i = 1 OR i = n""",
+    params)
+
+    by_thread = {}
+    for row in prompts:
+        by_thread.setdefault(row["thread_id"], []).append(row["prompt"])
+
+    print(f"Recent threads{" for " + model.model_id if model else ""}:")
+    for thread in threads:
+        rows = by_thread.get(thread["id"], [])
+        prompt = rows[0] if len(rows) == 1 else (rows[0] + " … " + rows[-1]) if rows else "???"
+        prompt = prompt.replace("\n", "").strip()
+        if len(prompt) > 120: prompt = prompt[:58] + " … " + prompt[-58:]
+
+        print("─" * 40)
+        print("thread:", thread["id"])
+        print("  name:", thread["name"])
+        print("  date:", thread["datetime_utc"][:19].replace('T', ' '))
+        print("prompt:", prompt)
 
 ####################
 else:
