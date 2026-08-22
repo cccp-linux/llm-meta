@@ -1,0 +1,17 @@
+Source: llm-meta
+Section: metapackages
+Maintainer: Dimitry Ishenko <dimitry.ishenko@gmail.com>
+Build-Depends:
+ debhelper-compat (= 13),
+Standards-Version: 4.7.4
+Vcs-Browser: https://github.com/cccp-linux/llm-meta
+Vcs-Git: https://github.com/cccp-linux/llm-meta.git
+
+Package: llm-meta
+Architecture: any
+Depends:
+ ${misc:Depends},
+ llm,
+ python3-prompt-toolkit,
+ python3-rich,
+Description: LLM meta-package
