@@ -125,10 +125,12 @@ else:
     pg_markdown = pg.lexers.MarkdownLexer()
     pt_markdown = pt.lexers.PygmentsLexer(pg.lexers.MarkdownLexer)
 
+    history = pt.history.InMemoryHistory()
+
     try:
         print("─" * 40)
         while True:
-            prompt = pt.prompt("> ", multiline=True, style=style, lexer=pt_markdown)
+            prompt = pt.prompt("> ", history=history, multiline=True, style=style, lexer=pt_markdown)
             if not prompt.strip(): continue
             print("·" * 40)
 
