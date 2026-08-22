@@ -114,7 +114,7 @@ elif args.history is not None:
 else:
     model = get_model(name if name != "llc" else None)
 
-    print(f"Using model '{model.model_id}'")
+    print("Using model", model.model_id)
     convo = model.conversation()
 
     style = pt.styles.pygments.style_from_pygments_cls(
