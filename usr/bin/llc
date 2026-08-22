@@ -10,6 +10,10 @@ import sys
 import threading
 import time
 
+def handle_exception(et, e, trace):
+    if et is not KeyboardInterrupt: print(e.args[0] if e.args else e)
+sys.excepthook = handle_exception
+
 db = sqlite_utils.Database(llm.user_dir() / "logs.db")
 
 def hide_cursor(): print("\033[?25l", end="")
@@ -29,13 +33,11 @@ def get_model(name):
     try: return llm.get_model(name)
     except llm.UnknownModelError:
         found = [ m for m in llm.get_models() if name in m.model_id ]
-        if not found:
-            print(f"Model '{name}' not found")
+        if not found: raise
         elif len(found) > 1:
-            print(f"Found more than one model matching '{name}':");
-            for m in found: print(m.model_id)
+            names = "\n".join(m.model_id for m in found)
+            raise ValueError(f"Found more than one model matching '{name}':\n{names}")
         else: return found[0]
-    sys.exit(1)
 
 ####################
 parser = argparse.ArgumentParser(add_help=False)
@@ -140,7 +142,7 @@ else:
                 response.log_to_db(db)
                 response = response.text()
             except Exception as e:
-                print(f"Error: {e}")
+                print(e)
             finally:
                 stop.set()
                 thread.join()
