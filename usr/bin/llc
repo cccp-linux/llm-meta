@@ -46,8 +46,7 @@ parser.add_argument("-h", "--help", action="help", help="""
     Show this help message and exit.
 """)
 parser.add_argument("-c", "--continue", dest="thread", metavar="thread", nargs="?", const="prev", help="""
-    Continue previous thread. If <thread> is omitted, continue the last thread
-    (overall or for the specific model, if the -m option was used).
+    Continue previous thread. If <thread> is omitted, continue the last thread.
 """)
 parser.add_argument("-H", "--history", metavar="num", nargs="?", type=int, const=3, help="""
     Show thread history. Defaults to the 3 most recent threads if <num> is omitted. Use 0 to show all.
@@ -121,18 +120,13 @@ elif args.history is not None:
 else:
     thread = args.thread
     if thread:
-        if thread == "prev":
-            if name == "llc": thread = None
-            else:
-                model = get_model(name)
-                row = next(db.query("""SELECT thread_id FROM turns
-                    WHERE model = ? ORDER BY datetime_utc DESC LIMIT 1""",
-                [model.model_id]), None)
-                if not row: raise ValueError("Can't find previous thread for " + model.model_id)
-                thread = row["thread_id"]
+        model = get_model(name) if name != "llc" else None
+        convo = load_conversation(thread if thread != "prev" else None)
+        if not convo: raise ValueError("No previous thread found")
 
-        convo = load_conversation(thread)
-        model = convo.model
+        if model: convo.model = model
+        else: model = convo.model
+
         print("Continuing thread", convo.id)
 
     else:
