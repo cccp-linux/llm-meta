@@ -1,5 +1,31 @@
-llm-meta (0.1) UNRELEASED; urgency=medium
+llm-meta (0.1) unstable; urgency=medium
 
-  * Initial release.
+  * llc: show model name in history
+  * llc: fix --continue option
+  * llc: don't reuse thread name
+  * llc: add --continue option
+  * llc: add history
+  * llc: don't bail on error
+  * llc: default to 3 most recent threads for -H
+  * llc: better error handling
+  * Add Debian release workflow
+  * Add Debian packaging
+  * llc: tweak
+  * llc: refactor show_threads
+  * llc: refactor get_model
+  * llc: refactor
+  * llc: refactor show_models
+  * llc: refactor
+  * llc: conversation => thread
+  * llc: let llm find the model
+  * llc: use global db instance
+  * llc: add --model and --history options
+  * llc: log conversations
+  * llc: remove hard-coded map
+  * llc: let user set default
+  * llc: ignore empty prompts
+  * Import README and LICENSE
+  * Import llc script
+  * Initial commit
 
- -- Dimitry Ishenko <dimitry.ishenko@gmail.com>  Wed, 19 Aug 2026 14:09:16 -0400
+ -- Dimitry Ishenko <dimitry.ishenko@gmail.com>  Sun, 23 Aug 2026 12:34:24 -0400
