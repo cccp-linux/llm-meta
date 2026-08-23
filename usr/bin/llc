@@ -79,9 +79,10 @@ elif args.history is not None:
     model = get_model(name) if name != "llc" else None
 
     threads = db.query("""
-        SELECT DISTINCT threads.id, threads.name, threads.datetime_utc
+        SELECT threads.id, threads.name, threads.datetime_utc, turns.model, MAX(turns.id)
         FROM threads JOIN turns ON threads.id = turns.thread_id
         WHERE turns.model LIKE ?
+        GROUP BY threads.id
         ORDER BY threads.datetime_utc DESC LIMIT ?""",
     [model.model_id if model else "%", count if count else -1])
     threads = list(threads)
@@ -114,6 +115,7 @@ elif args.history is not None:
         print("thread:", thread["id"])
         print("  name:", thread["name"])
         print("  date:", thread["datetime_utc"][:19].replace('T', ' '))
+        print(" model:", thread["model"])
         print("prompt:", prompt)
 
 ####################
