@@ -157,8 +157,8 @@ else:
             print("·" * 40)
 
             stop = threading.Event()
-            thread = threading.Thread(target=spinner, args=(stop,))
-            thread.start()
+            spin = threading.Thread(target=spinner, args=(stop,))
+            spin.start()
 
             try:
                 response = convo.prompt(prompt)
@@ -169,7 +169,7 @@ else:
                 print(e.args[0] if e.args else e)
             finally:
                 stop.set()
-                thread.join()
+                spin.join()
 
             if response:
                 tokens = pt.formatted_text.PygmentsTokens(pg.lex(response, lexer=pg_markdown))
